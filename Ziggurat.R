@@ -1,3 +1,5 @@
 rzigg <- function(pdf, n) {
-  return (1)
+  u <- runif(n)
+  x <- u # add code to transform to pdf here
+  return (x)
 }
