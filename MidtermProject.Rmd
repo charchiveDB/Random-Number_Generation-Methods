@@ -12,9 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Write Up
 
 ```{r}
-rzigg <- function(pdf, n) {
-  return (1)
-}
+source("Ziggurat.R")
 ```
 
 
