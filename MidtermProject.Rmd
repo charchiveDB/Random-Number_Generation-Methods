@@ -18,6 +18,14 @@ source("Ziggurat.R")
 
 
 ```{r}
+n <- 10000
 rzigg(NA, 100)
 ```
+
+Assume we generate 100000 with Ziggurat method and they're actually normal, using rnorm() for now
+
+```{r}
+samples <- rnorm(n)
+```
+
 
