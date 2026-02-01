@@ -17,6 +17,6 @@ source("Ziggurat.R")
 
 
 ```{r}
-rzigg
+rzigg(NA, 100)
 ```
 
