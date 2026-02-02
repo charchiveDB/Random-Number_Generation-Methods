@@ -1,6 +1,6 @@
 ---
 title: "Midterm Project"
-author: "Holden Ellis"
+author: "Holden Ellis, Charlotte Huang"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
