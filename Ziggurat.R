@@ -1,15 +1,3 @@
-rexpzig <- function(n) {
-  u <- runif(n)
-  x <- u # add code to transform to pdf here
-  return (x)
-}
-
-rnormzig <- function(n) {
-  u <- runif(n)
-  x <- u # add code to transform to pdf here
-  return (x)
-}
-
 zigtable <- function(f, f_inv, n) {
   # function to return the breakpoints (x1,x2,...,xn) for a pdf and its inverse function
   tail_integral <- function(r) {
@@ -51,3 +39,17 @@ zigtable <- function(f, f_inv, n) {
   return(list(x = x, v = v))
 }
 
+rexpzig <- function(n) {
+  u <- runif(n)
+  x <- u # add code to transform to pdf here
+  return (x)
+}
+
+rnormzig <- function(n, levels) {
+  results <- numeric(n_samples)
+  fx_vals <- f(x_vals)
+  
+  j <- rdunif(n,1,256)
+  u <- runif(n)
+  table <- zigtable[[1]]
+}
