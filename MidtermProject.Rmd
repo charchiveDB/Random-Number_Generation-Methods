@@ -26,11 +26,28 @@ Assume we generate 100000 with Ziggurat method and they're actually normal, usin
 
 # A chi-squared goodness of fit test (Knuth 1997) is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
 
-$\chi
+$\chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}$
+
+Where t = number of observation, 
+$p_i$ = probabilty that each observation falls into the the category i
+$Y_i$ = the number of observation that actually do fall into the category i. The 
 ```{r}
 samples <- rnorm(n)
 
-chi_squared_test <- function(x, breaks, pdf){
+chi_squared_test <- function(x, bins, pdf){
+  t <- length(x)
+  k <- length(bins)
+  
+  Yi <- hist(x, bins = bins, plot = FALSE)$counts
+  
+  p_i <- numeric(k)
+  for(i in 1:k){
+    p_i[i] <- integrate(pdf, bins[i], bins[i+1])$value
+  }
+  
+  chi_sq <- sum((Yi - t * p_i)^2 / (t*p_i))
+  
+}
 
 
 
