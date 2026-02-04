@@ -39,17 +39,81 @@ zigtable <- function(f, f_inv, n) {
   return(list(x = x, v = v))
 }
 
-rexpzig <- function(n) {
-  u <- runif(n)
-  x <- u # add code to transform to pdf here
-  return (x)
-}
-
-rnormzig <- function(n, levels) {
+rnormzig <- function(n_samples, n_layers=256) {
+  # set up vector to store samples
   results <- numeric(n_samples)
-  fx_vals <- f(x_vals)
   
-  j <- rdunif(n,1,256)
-  u <- runif(n)
-  table <- zigtable[[1]]
+  f <- function(x) {1/sqrt(2*pi) * exp(-x**2/2)}
+  f_inv <- function(y) {sqrt(-2*log(y*sqrt(2*pi)))}
+  
+  # Pre-calculate values that we use multiple times
+  x_vals <- zigtable(f, f_inv, n_layers)$x
+  
+  fx_vals <- f(x_vals)
+  # single rectangle area
+  v <- x_vals[2] * (fx_vals[1] - fx_vals[2]) 
+  # Calculate the "virtual width" of the base layer 
+  # allows us to sample in the same was as other layers
+  base_width <- v / fx_vals[n_layers] # should be proportion of base rectangle in base area
+  
+  for (k in 1:n_samples) {
+    repeat {
+      # 1. Pick a random rectangle index 'i' (usually 2 thru 256)
+      i <- sample(2:length(x_vals), 1)
+      
+      # If we are in the base layer
+      if (i == n_layers) {
+        x_candidate <- runif(1) * base_width
+        # check if sampled x is under n-1th rectangle
+        if (x_candidate < x_vals[n_layers]) {
+          if (runif(1) < 0.5) x_candidate <- -x_candidate
+          results[k] <- x_candidate
+          break
+        }
+        # otherwise, sample from tail distribution (specific)
+        repeat {
+          x_tail <- -log(runif(1)) / r
+          y_tail <- -log(runif(1))
+          if (2 * y_tail > x_tail**2) {
+            val <- r + x_tail
+            if (runif(1) < 0.5) val <- -val
+            results[k] <- val
+            break
+          }
+        }
+      }
+      
+      
+      # 2. Generate random X coordinate within the current rectangle width
+      # x_vals[i] is the width of the current box
+      x_candidate <- runif(1) * x_vals[i]
+      
+      # Fast Path, based on unoptimized 1984 method
+      # If x is within the width of the rectangle ABOVE (x_vals[i-1]),
+      # it is guaranteed to be under the curve.
+      if (x_candidate < x_vals[i-1]) {
+        # Apply random sign and move to next iteration
+        if (runif(1) < 0.5) x_candidate <- -x_candidate
+        results[k] <- x_candidate
+        break
+      }
+      
+      # Slow path, adapted from 2000 method
+      # should execute less than 5% of the time
+      
+      # Sampled x is in the "fringe" between x_vals[i-1] and x_vals[i]
+      
+      # Generate a random Y height relative to the strip
+      y_height <- runif(1) * (fx_vals[i-1] - fx_vals[i])
+      
+      # 5. Exact Density Check
+      # Does the random point (x, y) fall below the actual curve?
+      if ((fx_vals[i] + y_height) < f(x_candidate)) {
+        if (runif(1) < 0.5) x_candidate <- -x_candidate
+        results[k] <- x_candidate
+        break
+      }
+    }
+  }
+  return(results)
 }
