@@ -45,6 +45,12 @@ ks.test(x, "pnorm", mean=mean(x), sd=sd(x)) # rejected normality
 mean(x) # very close to 0
 sd(x)   # should be closer to 1
 
+# additional test:
+x2 <- rnorm(1000000)
+ks.test(x2, "pnorm", mean=mean(x2), sd=sd(x2)) # passed
+mean(x2)  # basically 0
+sd(x2)  # 1
+
 # QQ plot
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2) # basically normal
