@@ -47,11 +47,12 @@ rnormzig <- function(n_samples, n_layers=256) {
   f_inv <- function(y) {sqrt(-2*log(y*sqrt(2*pi)))}
   
   # Pre-calculate values that we use multiple times
-  x_vals <- zigtable(f, f_inv, n_layers)$x
+  pyramid <- zigtable(f, f_inv, n_layers)
+  x_vals <- pyramid$x
   
   fx_vals <- f(x_vals)
   # single rectangle area
-  v <- x_vals[2] * (fx_vals[1] - fx_vals[2]) 
+  v <- pyramid$v
   # Calculate the "virtual width" of the base layer 
   # allows us to sample in the same was as other layers
   base_width <- v / fx_vals[n_layers] # should be proportion of base rectangle in base area
