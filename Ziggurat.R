@@ -63,6 +63,8 @@ rnormzig <- function(n_samples, n_layers=256) {
   for (k in 1:n_samples) {
     repeat {
       # Pick a random rectangle index 'i' (usually 2 thru 257)
+      # sample is really slow for this
+      # in C, this can be extracted from the last 9 bits of a random value
       i <- sample(2:(n_layers + 1), 1)
       
       # If we are in the base layer
