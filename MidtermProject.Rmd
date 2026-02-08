@@ -63,28 +63,41 @@ Assume we generate 100000 with Ziggurat method and they're actually normal, usin
 $\chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}$
 
 Where t = number of observation, 
-$p_i$ = probabilty that each observation falls into the the category i
-$Y_i$ = the number of observation that actually do fall into the category i. The 
+$p_i$ = probability that each observation falls into the the category i
+$Y_i$ = the number of observation that actually do fall into the category i.  
 ```{r}
+set.seed(999)
+
+n = 100000
 samples <- rnorm(n)
 
-chi_squared_test <- function(x, bins, pdf){
-  t <- length(x)
-  k <- length(bins)
+chi_squared_test <- function(x, k){
+  t <- length(x) # number of observations
+  bins <- seq(min(x), 7, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
   
-  Yi <- hist(x, bins = bins, plot = FALSE)$counts
-  
+  Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
+  # expected probabilites (p_i) of standard normal
   p_i <- numeric(k)
-  for(i in 1:k){
-    p_i[i] <- integrate(pdf, bins[i], bins[i+1])$value
-  }
-  
-  chi_sq <- sum((Yi - t * p_i)^2 / (t*p_i))
-  
+  for (i in 1:k) {
+    p_i[i] <- pnorm(bins[i+1]) - pnorm(bins[i])
 }
+  # using computing chi square using equation from the paper
+  chi_sq <- sum((Yi - t * p_i)^2 / (t * p_i))
+  df <- k - 1
+  return(data.frame(chi_square = chi_sq,
+                    df = df))
+}
+
+
 
 
 
 ```
 
-
+```{r}
+n = 100000
+x <- rnorm(n)
+k <- 200
+results <- chi_squared_test(x, k)
+kable(results, caption = "Chi-squared value Ziggarut Method") 
+```
