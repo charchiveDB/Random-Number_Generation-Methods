@@ -121,3 +121,74 @@ rnormzig <- function(n_samples, n_layers=256) {
   }
   return(results)
 }
+
+rexpzig <- function(n_samples, n_layers=256) {
+  # set up vector to store samples
+  results <- numeric(n_samples)
+  
+  f <- function(x) {exp(-x)}
+  f_inv <- function(y) {-log(y)}
+  
+  # Pre-calculate values that we use multiple times
+  pyramid <- zigtable(f, f_inv, n_layers)
+  # index 1 is 0, index 256 is the end of layer n-1 and the split between base
+  # rectangle and tail
+  x_vals <- pyramid$x
+  
+  fx_vals <- f(x_vals)
+  
+  v <- pyramid$v # single rectangle area
+  r <- x_vals[n_layers]
+  base_prop <- r * fx_vals[n_layers] / v # proportion of base rectangle in base region
+  
+  for (k in 1:n_samples) {
+    repeat {
+      # Pick a random rectangle index 'i' (usually 2 thru 257)
+      # sample is really slow for this
+      # in C, this can be extracted from the last 9 bits of a random value
+      i <- sample(2:(n_layers + 1), 1)
+      
+      # If we are in the base layer
+      if (i == (n_layers + 1)) {
+        if (runif(1) < base_prop) { # generate proportionally from base rectangle and the tail
+          x_candidate <- runif(1, 0, x_vals[n_layers]) # if it in the base rectangle, randomly generate a point from it
+          results[k] <- x_candidate
+          break
+        }
+        # otherwise, sample from tail distribution (this part is specific to the normal)
+        u <- runif(1)
+        x_tail <- -log(u)
+        results[k] <- r + x_tail
+        break # not sure if this is necessary
+      }
+      # 2. Generate random X coordinate within the current rectangle width
+      # x_vals[i] is the width of the current box
+      x_candidate <- runif(1) * x_vals[i]
+      
+      # Fast Path, based on unoptimized 1984 method
+      # If x is within the width of the rectangle ABOVE (x_vals[i-1]),
+      # it is guaranteed to be under the curve.
+      if (x_candidate < x_vals[i-1]) {
+        # Apply random sign and move to next iteration
+        results[k] <- x_candidate
+        break
+      }
+      
+      # Slow path, adapted from 2000 method
+      # should execute less than 5% of the time
+      
+      # Sampled x is in the "fringe" between x_vals[i-1] and x_vals[i]
+      
+      # Generate a random Y height relative to the strip
+      y_height <- runif(1) * (fx_vals[i-1] - fx_vals[i])
+      
+      # 5. Exact Density Check
+      # Does the random point (x, y) fall below the actual curve?
+      if ((fx_vals[i] + y_height) < f(x_candidate)) {
+        results[k] <- x_candidate
+        break
+      }
+    }
+  }
+  return(results)
+}
