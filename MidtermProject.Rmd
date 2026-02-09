@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
+library(ggplot2)
 ```
 
 # Write Up
@@ -74,7 +75,7 @@ samples <- rnorm(n)
 
 chi_squared_test <- function(x, k){
   t <- length(x) # number of observations
-  bins <- seq(min(x), 7, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
+  bins <- seq(-7, 7, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
@@ -115,6 +116,47 @@ The critical value for a chi-square test with 199 degrees of freedom at 95% conf
 
 
 ```{r}
+n <- c(10000, 100000, 1000000, 10000000)
+set.seed(123)
+k <- 200 
+value <- numeric(length(n))
+for(i in 1:length(n)){
+  vectors <- rnormzig(n[i])
+  chi_sq <- chi_squared_test(vectors, k)
+  value[i] <- chi_sq$chi_square 
+  
+}
+
+plot(n, value,
+     type = "b",
+     xlab = "Number of Samples",
+     ylab = "Chi-square Statistic",
+     main = expression(chi^2 ~ "Statistic vs Sample Size"),
+     log = "x")
+
+df <- data.frame(
+  n = n,
+  chi_square = value
+)
+
+ggplot(df, aes(x = n, y = chi_square)) +
+  geom_line() +
+  geom_point() +
+  scale_x_log10() +
+  labs(
+    x = "Number of Samples",
+    y = "Chi-square Statistic",
+    title = expression(chi^2 ~ "Statistic vs Sample Size")
+  ) +
+  theme_bw()
+  
+```
+
+```{r}
+set.seed(123)
+test <- rnormzig(1000000)
+test_res <- chi_squared_test(test, k)
+test_res
 
 ```
 
