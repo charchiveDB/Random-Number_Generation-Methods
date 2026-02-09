@@ -100,7 +100,15 @@ set.seed(777)
 
 k <- 200
 results <- chi_squared_test(x, k)
-kable(results, caption = "Chi-squared value Ziggarut Method") 
+results2 <- chi_squared_test(x2, k)
+
+results$Method <- "Ziggurat"
+results2$Method <- "Rnorm"
+
+combined <- rbind(results, results2)
+combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
+kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
+
 ```
 
 The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha$ = 0.05) is 232.912. (using a look up table on https://www.medcalc.org/en/manual/chi-square-table.php)
