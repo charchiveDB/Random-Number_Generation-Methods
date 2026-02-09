@@ -1,6 +1,6 @@
 ---
 title: "Midterm Project"
-author: "Holden Ellis, Charlotte Huang"
+author: "Ethan Alteza, Barron Bronson, Holden Ellis, Charlotte Huang"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
@@ -112,3 +112,9 @@ kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
 ```
 
 The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha$ = 0.05) is 232.912. (using a look up table on https://www.medcalc.org/en/manual/chi-square-table.php)
+
+
+```{r}
+
+```
+
