@@ -96,8 +96,8 @@ chi_squared_test <- function(x, k){
 ```
 
 ```{r}
-n = 100000
-x <- rnorm(n)
+set.seed(777)
+
 k <- 200
 results <- chi_squared_test(x, k)
 kable(results, caption = "Chi-squared value Ziggarut Method") 
