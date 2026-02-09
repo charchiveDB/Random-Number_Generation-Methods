@@ -81,25 +81,24 @@ curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
 ```{r testing}
 set.seed(777)
 
-#testing: alpha = 0.01
+#testing: alpha = 0.01 
 samples1 <- rnormzig(4999)
 print("4999 Samples")
-
 shapiro.test(samples1) # no evidence against normal; p-value > alpha = 0.01
 ks.test(samples1, "pnorm", mean=mean(samples1), sd=sd(samples1)) # same
 
 print("1,000,000 ziggurat samples")
 # testing 1 mil samples...
-ks.test(x, "pnorm", mean=mean(x), sd=sd(x)) # rejected normality
-mean(x) # very close to 0
-sd(x)   # should be closer to 1
+ks.test(x, "pnorm", mean=mean(x), sd=sd(x)) # passed
+mean(x) # close to 0
+sd(x)   # close to 1
 
 print("1,000,000 rnorm samples")
 # additional test:
 x2 <- rnorm(1000000)
 ks.test(x2, "pnorm", mean=mean(x2), sd=sd(x2)) # passed
-mean(x2)  # basically 0
-sd(x2)  # 1
+mean(x2)  # close to 0
+sd(x2)    # close to 1
 
 # QQ plot
 qqnorm(x, pch = 1, frame = FALSE)
