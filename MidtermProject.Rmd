@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
+library(ggplot2)
 ```
 
 # Write Up
@@ -18,6 +19,55 @@ source("Ziggurat.R")
 source("BoxMuller.R") # if anyone wants to compare, much faster because of how R runs code
 ```
 
+```{r}
+# build the table for the Ziggurat
+x <- zigtable(function(x) {1/sqrt(2*pi) * exp(-x**2/2)}, function(y) {sqrt(-2*log(y*sqrt(2*pi)))},8)$x
+y <- dnorm(x)
+r_val <- tail(x, 1)
+
+# Dataframe to draw rectangles
+df_rect <- data.frame(
+  xmin = 0,
+  xmax = x[-1],         # x[2]...x[8]
+  ymin = y[-1],         # y[2]...y[8]
+  ymax = y[-length(y)]  # y[1]...y[7]
+)
+
+ggplot() +
+  # draw rectangles
+  geom_rect(data = df_rect, 
+            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = NA, color = "grey", linewidth = 0.8) +
+  
+  # dotted line at x=r
+  geom_segment(aes(x = r_val, xend = r_val, y = 0, yend = tail(y, 1)), 
+               linetype = "dashed", color = "grey", linewidth = 0.8) +
+  
+  # draw normal distribution
+  stat_function(fun = dnorm, geom = "line", color = "black", n = 1000) +
+    # highlight area under the curve
+  stat_function(fun = dnorm, geom = "area", fill = "skyblue", alpha = 0.2, xlim = c(0, 5)) +
+  
+  # style axes
+  scale_x_continuous(
+    limits = c(0, 5), 
+    expand = c(0, 0),
+    breaks = sort(c(0:5, r_val)), 
+    labels = function(b) {
+      # Use a small epsilon for float comparison
+      ifelse(abs(b - r_val) < 1e-6, "r", b)
+    }
+  ) +
+  scale_y_continuous(limits = c(0, 0.45), expand = c(0, 0)) +
+  
+  # labels and plot styles
+  labs(x = "x", y = "Density") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black")
+  )
+```
 
 ```{r}
 zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
