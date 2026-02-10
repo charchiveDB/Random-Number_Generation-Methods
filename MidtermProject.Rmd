@@ -114,7 +114,7 @@ zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
 ```{r}
 set.seed(777)
 x <- rnormzig(1000000)
-hist(x, freq=FALSE)
+hist(x, breaks = 100, freq=FALSE)
 curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
 ```
 ```{r testing}
@@ -148,9 +148,9 @@ qqline(x, col = "steelblue", lwd = 2) # basically normal
 Assume we generate 100000 with Ziggurat method and they're actually normal, using rnorm() for now
 
 ```{r}
-set.seed(777)
+set.seed(77)
 x_exp <- rexpzig(1000000)
-hist(x_exp, freq = FALSE)
+hist(x_exp, breaks = 100, freq = FALSE)
 curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
 ```
 ```{r}
@@ -164,15 +164,13 @@ qqline(x_exp, col = "steelblue", lwd = 2) # basically normal
 print("1,000,000 Ziggurat samples")
 mean(x_exp) #Should be close to 1
 sd(x_exp) #Should be close to 1
-ks.test(x_exp, "pexp", rate = mean(x_exp)) #large p-value -> fail to reject expoential distribution
+ks.test(x_exp, "pexp", rate = 1/mean(x_exp)) #large p-value -> fail to reject expoential distribution
 
-print("1,000,000 rnorm samples")
-# additional test:
 x2_exp <- rexp(1000000)
-x2ks.test(x2_exp, "pexp", rate = mean(x2_exp)) # passed
-mean(x2_exp)  # basically 1
-sd(x2_exp)  # 1
-
+sum(duplicated(x2_exp))
+mean(x2_exp) #Should be close to 1
+sd(x2_exp) #Should be close to 1
+ks.test(x2_exp, "pexp", rate = 1/mean(x2_exp))
 ```
 
 ## Testing For Accuracy
