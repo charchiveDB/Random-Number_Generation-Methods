@@ -2,7 +2,10 @@
 title: "Midterm Project"
 author: "Ethan Alteza, Barron Bronson, Holden Ellis, Charlotte Huang"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  pdf_document:
+    latex_engine: xelatex
+
 ---
 
 ```{r setup, include=FALSE}
@@ -107,6 +110,34 @@ qqline(x, col = "steelblue", lwd = 2) # basically normal
 
 
 Assume we generate 100000 with Ziggurat method and they're actually normal, using rnorm() for now
+
+```{r}
+set.seed(777)
+x_exp <- rexpzig(1000000)
+hist(x_exp, freq = FALSE)
+curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
+```
+```{r}
+set.seed(777)
+qqplot(qexp(ppoints(length(x_exp)), rate = 1/mean(x_exp)),
+       sort(x_exp),
+       xlab = "Theoretical Exp Quantiles",
+       ylab = "Sample Quantiles")
+qqline(x_exp, col = "steelblue", lwd = 2) # basically normal
+
+print("1,000,000 Ziggurat samples")
+mean(x_exp) #Should be close to 1
+sd(x_exp) #Should be close to 1
+ks.test(x_exp, "pexp", rate = mean(x_exp)) #large p-value -> fail to reject expoential distribution
+
+print("1,000,000 rnorm samples")
+# additional test:
+x2_exp <- rexp(1000000)
+ks.test(x2_exp, "pexp", rate = mean(x2_exp)) # passed
+mean(x2_exp)  # basically 1
+sd(x2_exp)  # 1
+
+```
 
 # A chi-squared goodness of fit test (Knuth 1997) is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
 
