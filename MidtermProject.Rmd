@@ -169,7 +169,7 @@ ks.test(x_exp, "pexp", rate = mean(x_exp)) #large p-value -> fail to reject expo
 print("1,000,000 rnorm samples")
 # additional test:
 x2_exp <- rexp(1000000)
-ks.test(x2_exp, "pexp", rate = mean(x2_exp)) # passed
+x2ks.test(x2_exp, "pexp", rate = mean(x2_exp)) # passed
 mean(x2_exp)  # basically 1
 sd(x2_exp)  # 1
 
@@ -187,17 +187,11 @@ $p_i = $probability that each observation falls into the the category i
 
 $Y_i =$ the number of observation that actually do fall into the category i
 
-Using the rnormzig() function to generate 100,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a 2 value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution. 
+Using the rnormzig() function to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a chi-square value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution. 
 
-is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
 
 ```{r}
-set.seed(999)
-
-n = 100000
-samples <- rnorm(n)
-
-chi_squared_test <- function(x, k){
+chi_squared_test_norm <- function(x, k){
   t <- length(x) # number of observations
   bins <- seq(-7, 7, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
   
@@ -224,8 +218,8 @@ chi_squared_test <- function(x, k){
 set.seed(777)
 
 k <- 200
-results <- chi_squared_test(x, k)
-results2 <- chi_squared_test(x2, k)
+results <- chi_squared_test_norm(x, k)
+results2 <- chi_squared_test_norm(x2, k)
 
 results$Method <- "Ziggurat"
 results2$Method <- "Rnorm"
@@ -242,7 +236,7 @@ k <- 200
 value <- numeric(length(n))
 for(i in 1:length(n)){
   vectors <- rnormzig(n[i])
-  chi_sq <- chi_squared_test(vectors, k)
+  chi_sq <- chi_squared_test_norm(vectors, k)
   value[i] <- chi_sq$chi_square 
   
 }
@@ -264,6 +258,68 @@ ggplot(df, aes(x = n, y = chi_square)) +
   ) +
   theme_bw()
 ```
+# Chi-squared Test for Exponential 
+```{r}
+chi_squared_test_exp <- function(x, k){
+  t <- length(x) # number of observations
+  bins <- seq(0, max(x), length.out = k+1) #200 bins spaced uniformly over data edge of min and max
+  
+  Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
+  # expected probabilites (p_i) of standard normal
+  p_i <- numeric(k)
+  for (i in 1:k) {
+    p_i[i] <- pexp(bins[i+1]) - pexp(bins[i])
+}
+  # using computing chi square using equation from the paper
+  chi_sq <- sum((Yi - t * p_i)^2 / (t * p_i))
+  df <- k - 1
+  return(data.frame(chi_square = chi_sq,
+                    df = df))
+}
+```
 
+```{r}
+set.seed(777)
+
+k <- 200
+results_exp <- chi_squared_test_exp(x_exp, k)
+results2_exp <- chi_squared_test_exp(x2_exp, k)
+
+results_exp$Method <- "Ziggurat"
+results2_exp$Method <- "Rexp"
+
+combined <- rbind(results_exp, results2_exp)
+combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
+kable(combined, caption = "Chi-squared value: Ziggurat vs Rexp")
+```
+```{r}
+n <- c(10000, 100000, 1000000, 10000000)
+set.seed(123)
+k <- 200 
+value <- numeric(length(n))
+for(i in 1:length(n)){
+  vectors <- rexpzig(n[i])
+  chi_sq <- chi_squared_test_exp(vectors, k)
+  value[i] <- chi_sq$chi_square 
+  
+}
+
+
+df <- data.frame(
+  n = n,
+  chi_square = value
+)
+
+ggplot(df, aes(x = n, y = chi_square)) +
+  geom_line() +
+  geom_point() +
+  scale_x_log10() +
+  labs(
+    x = "Number of Samples",
+    y = "Chi-square Statistic",
+    title = expression(chi^2 ~ "Statistic vs Sample Size")
+  ) +
+  theme_bw()
+```
 ## Works Cited
 
