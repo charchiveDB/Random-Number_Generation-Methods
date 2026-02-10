@@ -139,7 +139,8 @@ sd(x2_exp)  # 1
 
 ```
 
-# A chi-squared goodness of fit test (Knuth 1997) is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
+# A chi-squared goodness of fit test(Knuth 1997)
+is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
 
 $\chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}$
 
@@ -205,7 +206,6 @@ for(i in 1:length(n)){
   value[i] <- chi_sq$chi_square 
   
 }
-
 
 
 df <- data.frame(
