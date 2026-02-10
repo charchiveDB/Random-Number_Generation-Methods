@@ -14,7 +14,8 @@ library(knitr)
 library(ggplot2)
 ```
 
-# Write Up
+# The Ziggurat Method for Random Number Generation
+
 https://docs.google.com/document/d/1HZTEfuxbhKEsMSGoFqDvulxrU5hy9rIVp31Wf9el38g/edit?usp=sharing
 
 ```{r}
@@ -22,7 +23,10 @@ source("Ziggurat.R")
 source("BoxMuller.R") # if anyone wants to compare, much faster because of how R runs code
 ```
 
-```{r}
+The Ziggurat Method for Generating Random Variables (2000) by Marsaglia and Tsang outlines a strategy for sampling from probability distributions that are either decreasing or symmetric and unimodal. The method itself was first published by the same authors in 1984, but was made more efficient with this publication. The namesake comes from the Ziggurat structures built in ancient Mesopotamia; these massive, rectangular pyramid structures were temple towers that featured several steps. The Ziggurat method functions by dividing the density into 256 regions of equal area ($v$). For all regions besides the base layer, the regions are in the shape of a rectangle, but the lowest region includes both a rectangular component and the tail beyond the cutoff, which is sampled using a specialized accept–reject method. These rectangles are mostly encapsulated under the curve, only a small portion of the right edge sticks out of the density.
+
+
+```{r, echo=FALSE}
 # build the table for the Ziggurat
 x <- zigtable(function(x) {1/sqrt(2*pi) * exp(-x**2/2)}, function(y) {sqrt(-2*log(y*sqrt(2*pi)))},8)$x
 y <- dnorm(x)
@@ -72,11 +76,43 @@ ggplot() +
   )
 ```
 
+Sampling is done by picking a random level of the ziggurat and then drawing from a uniform within it. The optimization here is that most of these points (over 99%) fall under the rectangle above and we are able to immediately accept them by a simple check, without ever computing the density function. This paper is quite significant to RNG, since the Ziggurat method became the standard technique in sampling for many distributions; it also is one of the fastest general methods. In NumPy, one of the most popular Python packages, generators for the Normal, Exponential, and Gamma distributions now utilize the Ziggurat method as of 2019. These generators are 2-10 times faster than the original implementation, which goes to show how efficient this method is.
+
+## Our Application
+
+We implemented two Ziggurat R functions, one for the Normal distribution and one for the Exponential distribution: rnormzig and rexpzig. Separate functions need to be written for each distribution for two reasons. First, the most effective method for drawing from the tail distribution is unique.  For the normal, Marsaglia recommends
+$$
+X = -ln(U_1)/r, Y = -ln(U_2) 
+\\
+U_1,U_2 \sim \mathrm{Uniform}(0,1)
+\\
+\text{if } 2Y > X^2, 
+\\
+Z_{tail} = r + X
+$$
+and for the exponential he recommends
+$$
+X = r - log(U), U \sim \mathrm{Uniform}(0,1)
+$$
+Second, the Normal distribution is symmetric about zero, whereas the Exponential distribution is not. After generating a positive Normal x value using the Ziggurat construction, symmetry is enforced by randomly assigning a sign to that value. This step is not necessary when sampling from the Exponential distribution because the distribution is defined only on $[0, infty)$.
+ To draw from the rectangles, the code just requires the pdf and the inverse pdf for the distribution. This is done by first computing the breakpoints of each rectangle, which is handled by the function zigtable(). This is done by choosing a random value,$r$, in the domain such that 
+$$
+v = rf(r) + \int_{r}^{\inf} f(x)dx
+$$
+$r$ becomes $x_n$ and $x_{n-1}$ is generated iteratively by
+$$
+x_{i-1} = f^{-1}(\frac{v}{x_i} + f(x_i))
+$$
+This process repeats until $x_0 = 0$. The challenge here is choosing the optimal $v$ so that the iterative process doesn’t overshoot or undershoot. This is done R’s `uniroot` function
+Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve.
+
+
 ```{r}
 zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
 ```
 
 ```{r}
+set.seed(292026)
 x <- rnormzig(1000000)
 hist(x, freq=FALSE)
 curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
@@ -139,14 +175,22 @@ sd(x2_exp)  # 1
 
 ```
 
-# A chi-squared goodness of fit test(Knuth 1997)
+## Testing For Accuracy
+
+In order to validate that the Ziggurat method is actually generating the random variables of interest, we performed the chi-square goodness of fit test (Knuth 1997). This test is used to check the distribution of the random variables generated by quantizing the horizontal axis of the probability density function into k bins and deriving a single value as a quality metric from the determined actual and expected number of samples in each bin. We constructed an R function based on the chi-square statistic formula: 2k-1 =i=1k(Yi-tpi)2/ tpi.
+$$
+\chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}
+$$
+$t =$ number of observations
+
+$p_i = $probability that each observation falls into the the category i
+
+$Y_i =$ the number of observation that actually do fall into the category i
+
+Using the rnormzig() function to generate 100,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a 2 value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution. 
+
 is used to check the distribution of the random variables generated. This test quantizes the horizontal axis of the probability density function into k bins and derives a single value as a quality metric from the determined actual and expected number of samples in each bin. 
 
-$\chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}$
-
-Where t = number of observation, 
-$p_i$ = probability that each observation falls into the the category i
-$Y_i$ = the number of observation that actually do fall into the category i.  
 ```{r}
 set.seed(999)
 
@@ -189,11 +233,7 @@ results2$Method <- "Rnorm"
 combined <- rbind(results, results2)
 combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
 kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
-
 ```
-
-The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha$ = 0.05) is 232.912. (using a look up table on https://www.medcalc.org/en/manual/chi-square-table.php)
-
 
 ```{r}
 n <- c(10000, 100000, 1000000, 10000000)
@@ -223,8 +263,7 @@ ggplot(df, aes(x = n, y = chi_square)) +
     title = expression(chi^2 ~ "Statistic vs Sample Size")
   ) +
   theme_bw()
-  
 ```
 
-
+## Works Cited
 
