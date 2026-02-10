@@ -112,7 +112,7 @@ zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
 ```
 
 ```{r}
-set.seed(292026)
+set.seed(777)
 x <- rnormzig(1000000)
 hist(x, freq=FALSE)
 curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
@@ -231,7 +231,7 @@ kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
 
 ```{r}
 n <- c(10000, 100000, 1000000, 10000000)
-set.seed(123)
+set.seed(777)
 k <- 200 
 value <- numeric(length(n))
 for(i in 1:length(n)){
@@ -293,8 +293,8 @@ combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
 kable(combined, caption = "Chi-squared value: Ziggurat vs Rexp")
 ```
 ```{r}
+set.seed(777)
 n <- c(10000, 100000, 1000000, 10000000)
-set.seed(123)
 k <- 200 
 value <- numeric(length(n))
 for(i in 1:length(n)){
