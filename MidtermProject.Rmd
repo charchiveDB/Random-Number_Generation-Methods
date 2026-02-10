@@ -226,11 +226,5 @@ ggplot(df, aes(x = n, y = chi_square)) +
   
 ```
 
-```{r}
-set.seed(123)
-test <- rnormzig(1000000)
-test_res <- chi_squared_test(test, k)
-test_res
 
-```
 
