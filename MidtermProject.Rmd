@@ -159,8 +159,10 @@ qqplot(qexp(ppoints(length(x_exp)), rate = 1/mean(x_exp)),
        sort(x_exp),
        xlab = "Theoretical Exp Quantiles",
        ylab = "Sample Quantiles")
-qqline(x_exp, col = "steelblue", lwd = 2) # basically normal
+abline(0, 1, col = "red")
+```
 
+```{r}
 print("1,000,000 Ziggurat samples")
 mean(x_exp) #Should be close to 1
 sd(x_exp) #Should be close to 1
