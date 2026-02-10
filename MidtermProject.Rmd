@@ -167,7 +167,6 @@ sd(x_exp) #Should be close to 1
 ks.test(x_exp, "pexp", rate = 1/mean(x_exp)) #large p-value -> fail to reject expoential distribution
 
 x2_exp <- rexp(1000000)
-sum(duplicated(x2_exp))
 mean(x2_exp) #Should be close to 1
 sd(x2_exp) #Should be close to 1
 ks.test(x2_exp, "pexp", rate = 1/mean(x2_exp))
