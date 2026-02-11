@@ -104,46 +104,46 @@ $$
 x_{i-1} = f^{-1}(\frac{v}{x_i} + f(x_i))
 $$
 This process repeats until $x_0 = 0$. The challenge here is choosing the optimal $v$ so that the iterative process doesn’t overshoot or undershoot. This is done R’s `uniroot` function
-Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve.
-
+Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve. In the end, our code can construct a Ziggurat for any distribution that meets the mathematical criteria. Here is an example of the code for the exponential distribution with 8 levels:
 
 ```{r}
 zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
 ```
 
+## Testing
+
+After programming the Ziggurat method, we wanted to test it for the desired statistical properties, which can be done by generating a very large number of samples.
+
 ```{r}
 set.seed(777)
 x <- rnormzig(1000000)
-hist(x, breaks = 100, freq=FALSE)
+```
+
+We can plot the distribution of the samples with the actual normal pdf overlayed, which shows good fit.
+
+```{r plot, echo=FALSE}
+hist(x, breaks = 100, freq=FALSE, main="Distribution of Normal Samples")
 curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
 ```
-```{r testing}
-set.seed(777)
 
-#testing: alpha = 0.01 
-samples1 <- rnormzig(4999)
-print("4999 Samples")
-shapiro.test(samples1) # no evidence against normal; p-value > alpha = 0.01
-ks.test(samples1, "pnorm", mean=mean(samples1), sd=sd(samples1)) # same
+We can also check $\bar{x}$ and $\sigma_x$, which we expect to be very close to 0 and 1, respectively.
 
-print("1,000,000 ziggurat samples")
-# testing 1 mil samples...
-ks.test(x, "pnorm", mean=mean(x), sd=sd(x)) # passed
-mean(x) # close to 0
-sd(x)   # close to 1
-
-print("1,000,000 rnorm samples")
-# additional test:
-x2 <- rnorm(1000000)
-ks.test(x2, "pnorm", mean=mean(x2), sd=sd(x2)) # passed
-mean(x2)  # close to 0
-sd(x2)    # close to 1
-
-# QQ plot
-qqnorm(x, pch = 1, frame = FALSE)
-qqline(x, col = "steelblue", lwd = 2) # basically normal
+```{r}
+mean(x)  # close to 0
+sd(x)    # close to 1
 ```
 
+To test formally, we apply 2 different types of tests: The Kolmogorov-Smirnov Test and the Chi-Squared test.
+
+With the Kolmogorov-Smirnov test we expect to not have sufficient evidence to reject $H_0$, that being
+
+$$
+H_0 : f_x(x) = \frac{1}{\sqrt{2\pi}}exp(\frac{x^2}{2})
+$$
+
+```{r k-s}
+ks.test(x, "pnorm", mean=0, sd=1) # passed
+```
 
 Assume we generate 100000 with Ziggurat method and they're actually normal, using rnorm() for now
 
@@ -176,7 +176,7 @@ ks.test(x2_exp, "pexp", rate = 1/mean(x2_exp))
 
 ## Testing For Accuracy
 
-In order to validate that the Ziggurat method is actually generating the random variables of interest, we performed the chi-square goodness of fit test (Knuth 1997). This test is used to check the distribution of the random variables generated by quantizing the horizontal axis of the probability density function into k bins and deriving a single value as a quality metric from the determined actual and expected number of samples in each bin. We constructed an R function based on the chi-square statistic formula: 2k-1 =i=1k(Yi-tpi)2/ tpi.
+In order to validate that the Ziggurat method is actually generating the random variables of interest, we performed the chi-square goodness of fit test (Knuth 1997). This test is used to check the distribution of the random variables generated by quantizing the horizontal axis of the probability density function into k bins and deriving a single value as a quality metric from the determined actual and expected number of samples in each bin. We constructed an R function based on the chi-square statistic formula:
 $$
 \chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}
 $$
