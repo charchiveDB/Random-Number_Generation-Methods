@@ -177,7 +177,11 @@ results2$Method <- "Rnorm"
 
 combined <- rbind(results, results2)
 combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
-kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
+df <- k - 1 
+combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
+#Format for readability 
+combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-squared value: Ziggurat vs rnorm")
 ```
 
 ```{r, echo=FALSE}
@@ -256,7 +260,11 @@ results2_exp$Method <- "Rexp"
 
 combined <- rbind(results_exp, results2_exp)
 combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
-kable(combined, caption = "Chi-squared value: Ziggurat vs Rexp")
+df <- k - 1 
+combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
+#Format for readability 
+combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-squared value: Ziggurat vs rexp")
 ```
 
 And last, we can see how the chi-square statistic varies by sample size.
