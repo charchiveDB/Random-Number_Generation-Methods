@@ -1,5 +1,5 @@
 ---
-title: "Midterm Project"
+title: "The Ziggurat Method for Random Number Generation"
 author: "Ethan Alteza, Barron Bronson, Holden Ellis, Charlotte Huang"
 date: "`r Sys.Date()`"
 output:
@@ -14,8 +14,6 @@ library(knitr)
 library(ggplot2)
 ```
 
-# The Ziggurat Method for Random Number Generation
-
 https://docs.google.com/document/d/1HZTEfuxbhKEsMSGoFqDvulxrU5hy9rIVp31Wf9el38g/edit?usp=sharing
 
 ```{r}
@@ -24,7 +22,7 @@ source("Ziggurat.R")
 
 The Ziggurat Method for Generating Random Variables (2000) by Marsaglia and Tsang outlines a strategy for sampling from probability distributions that are either decreasing or symmetric and unimodal. The method itself was first published by the same authors in 1984, but was made more efficient with this publication. The namesake comes from the Ziggurat structures built in ancient Mesopotamia; these massive, rectangular pyramid structures were temple towers that featured several steps. The Ziggurat method functions by dividing the density into 256 regions of equal area ($v$). For all regions besides the base layer, the regions are in the shape of a rectangle, but the lowest region includes both a rectangular component and the tail beyond the cutoff, which is sampled using a specialized accept–reject method. These rectangles are mostly encapsulated under the curve, only a small portion of the right edge sticks out of the density.
 
-```{r, echo=FALSE, out.width="50%"}
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
 # build the table for the Ziggurat
 x <- zigtable(function(x) {1/sqrt(2*pi) * exp(-x**2/2)}, function(y) {sqrt(-2*log(y*sqrt(2*pi)))},8)$x
 y <- dnorm(x)
@@ -230,7 +228,7 @@ Repeating the steps from the previous section, we can write a function to divide
 ```{r}
 chi_squared_test_exp <- function(x, k){
   t <- length(x) # number of observations
-  bins <- seq(0, max(x), length.out = k+1) #200 bins spaced uniformly over data edge of min and max
+  bins <- seq(0, 26.5, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
