@@ -269,7 +269,7 @@ kable(combined, caption = "Chi-Squared Test: Ziggurat vs rexp",
 And last, we can see how the chi-square statistic varies by sample size.
 
 ```{r, echo=FALSE, out.width="50%", fig.align="center"}
-set.seed(777)
+set.seed(2122026)
 n <- 10**(seq(3,7,by=0.5))
 k <- 200 
 value <- numeric(length(n))
