@@ -210,9 +210,9 @@ ggplot(df, aes(x = n, y = chi_square)) +
   geom_line() +
   geom_point() +
   scale_x_log10() +
-  geom_vline(xintercept = 232.912, linetype = "dashed", color = "red") +
-  annotate("text", x = 232.912, y = Inf, label = "Critical Value", 
-           vjust = 2, hjust = -0.1, color = "red") +
+  geom_hline(yintercept = 232.912, linetype = "dashed", color = "red") +
+  annotate("text", x = Inf, y = 232.912, label = "Critical Value", 
+           vjust = -0.5, hjust = 1.1, color = "red") +
   labs(
     x = "Samples (n)",
     y = "Chi-square Statistic",
@@ -288,9 +288,9 @@ df <- data.frame(
 ggplot(df, aes(x = n, y = chi_square)) +
   geom_line() +
   geom_point() +
-  geom_vline(xintercept = 232.912, linetype = "dashed", color = "red") +
-  annotate("text", x = 232.912, y = Inf, label = "Critical Value", 
-           vjust = 2, hjust = -0.1, color = "red") +
+  geom_hline(yintercept = 232.912, linetype = "dashed", color = "red") +
+  annotate("text", x = Inf, y = 232.912, label = "Critical Value", 
+           vjust = -0.5, hjust = 1.1, color = "red") +
   scale_x_log10() +
   labs(
     x = "Samples (n)",
