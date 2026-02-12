@@ -192,7 +192,7 @@ Using the rnormzig() function to generate 1,000,000 random variates, the distrib
 ```{r}
 chi_squared_test_norm <- function(x, k){
   t <- length(x) # number of observations
-  bins <- seq(-7, 7, length.out = k+1) #200 bins spaced uniformly over data edge of min and max
+  bins <- qnorm(seq(0, 1, length.out = k+1), mean = 0, sd = 1) #200 bins with equal prob
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
@@ -261,7 +261,10 @@ ggplot(df, aes(x = n, y = chi_square)) +
 ```{r}
 chi_squared_test_exp <- function(x, k){
   t <- length(x) # number of observations
-  bins <- seq(0, max(x), length.out = k+1) #200 bins spaced uniformly over data edge of min and max
+  
+  #binomial distribution approximately normal when np > 5, when we use bins with equal width np gets     very small which means Y_i is not approx. normal and the chi square test fails b/c test stat not       normal
+  bins <- qexp(seq(0, 1, length.out = k+1), rate = 1) #200 bins all with the same probability
+
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
