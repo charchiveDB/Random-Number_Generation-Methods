@@ -1,5 +1,5 @@
 ---
-title: "Midterm Project"
+title: "The Ziggurat Method for Random Number Generation"
 author: "Ethan Alteza, Barron Bronson, Holden Ellis, Charlotte Huang"
 date: "`r Sys.Date()`"
 output:
@@ -14,19 +14,15 @@ library(knitr)
 library(ggplot2)
 ```
 
-# The Ziggurat Method for Random Number Generation
-
 https://docs.google.com/document/d/1HZTEfuxbhKEsMSGoFqDvulxrU5hy9rIVp31Wf9el38g/edit?usp=sharing
 
 ```{r}
 source("Ziggurat.R")
-source("BoxMuller.R") # if anyone wants to compare, much faster because of how R runs code
 ```
 
 The Ziggurat Method for Generating Random Variables (2000) by Marsaglia and Tsang outlines a strategy for sampling from probability distributions that are either decreasing or symmetric and unimodal. The method itself was first published by the same authors in 1984, but was made more efficient with this publication. The namesake comes from the Ziggurat structures built in ancient Mesopotamia; these massive, rectangular pyramid structures were temple towers that featured several steps. The Ziggurat method functions by dividing the density into 256 regions of equal area ($v$). For all regions besides the base layer, the regions are in the shape of a rectangle, but the lowest region includes both a rectangular component and the tail beyond the cutoff, which is sampled using a specialized accept–reject method. These rectangles are mostly encapsulated under the curve, only a small portion of the right edge sticks out of the density.
 
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
 # build the table for the Ziggurat
 x <- zigtable(function(x) {1/sqrt(2*pi) * exp(-x**2/2)}, function(y) {sqrt(-2*log(y*sqrt(2*pi)))},8)$x
 y <- dnorm(x)
@@ -104,90 +100,52 @@ $$
 x_{i-1} = f^{-1}(\frac{v}{x_i} + f(x_i))
 $$
 This process repeats until $x_0 = 0$. The challenge here is choosing the optimal $v$ so that the iterative process doesn’t overshoot or undershoot. This is done R’s `uniroot` function
-Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve.
-
+Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve. In the end, our code can construct a Ziggurat for any distribution that meets the mathematical criteria. Here is an example of the code for the exponential distribution with 8 levels:
 
 ```{r}
 zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
 ```
 
+## Testing
+
+After programming the Ziggurat method, we wanted to test it for the desired statistical properties, which can be done by generating a very large number of samples.
+
 ```{r}
 set.seed(777)
-x <- rnormzig(1000000)
-hist(x, breaks = 100, freq=FALSE)
+x_1 <- rnormzig(1000000)
+```
+
+We can plot the distribution of the samples with the actual normal pdf overlayed, which shows good fit.
+
+```{r plot, echo=FALSE}
+hist(x_1, breaks = 100, freq=FALSE, main="Distribution of Normal Samples", xlab="x")
 curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
 ```
-```{r testing}
-set.seed(777)
 
-#testing: alpha = 0.01 
-samples1 <- rnormzig(4999)
-print("4999 Samples")
-shapiro.test(samples1) # no evidence against normal; p-value > alpha = 0.01
-ks.test(samples1, "pnorm", mean=mean(samples1), sd=sd(samples1)) # same
-
-print("1,000,000 ziggurat samples")
-# testing 1 mil samples...
-ks.test(x, "pnorm", mean=mean(x), sd=sd(x)) # passed
-mean(x) # close to 0
-sd(x)   # close to 1
-
-print("1,000,000 rnorm samples")
-# additional test:
-x2 <- rnorm(1000000)
-ks.test(x2, "pnorm", mean=mean(x2), sd=sd(x2)) # passed
-mean(x2)  # close to 0
-sd(x2)    # close to 1
-
-# QQ plot
-qqnorm(x, pch = 1, frame = FALSE)
-qqline(x, col = "steelblue", lwd = 2) # basically normal
-```
-
-
-Assume we generate 100000 with Ziggurat method and they're actually normal, using rnorm() for now
+We can also check $\bar{x}$ and $\sigma_x$, which we expect to be very close to 0 and 1, respectively.
 
 ```{r}
-set.seed(77)
-x_exp <- rexpzig(1000000)
-hist(x_exp, breaks = 100, freq = FALSE)
-curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
-```
-```{r}
-set.seed(777)
-qqplot(qexp(ppoints(length(x_exp)), rate = 1/mean(x_exp)),
-       sort(x_exp),
-       xlab = "Theoretical Exp Quantiles",
-       ylab = "Sample Quantiles")
-abline(0, 1, col = "red")
-```
-
-```{r}
-print("1,000,000 Ziggurat samples")
-mean(x_exp) #Should be close to 1
-sd(x_exp) #Should be close to 1
-ks.test(x_exp, "pexp", rate = 1/mean(x_exp)) #large p-value -> fail to reject expoential distribution
-
-x2_exp <- rexp(1000000)
-mean(x2_exp) #Should be close to 1
-sd(x2_exp) #Should be close to 1
-ks.test(x2_exp, "pexp", rate = 1/mean(x2_exp))
+mean(x_1)  # close to 0
+sd(x_1)    # close to 1
 ```
 
 ## Testing For Accuracy
 
-In order to validate that the Ziggurat method is actually generating the random variables of interest, we performed the chi-square goodness of fit test (Knuth 1997). This test is used to check the distribution of the random variables generated by quantizing the horizontal axis of the probability density function into k bins and deriving a single value as a quality metric from the determined actual and expected number of samples in each bin. We constructed an R function based on the chi-square statistic formula: 2k-1 =i=1k(Yi-tpi)2/ tpi.
+In order to formally validate that the Ziggurat method is actually generating the random variables of interest, we performed the chi-square goodness of fit test (Knuth 1997). This test is used to check the distribution of the random variables generated by quantizing the horizontal axis of the probability density function into k bins and deriving a single value as a quality metric from the determined actual and expected number of samples in each bin. We constructed an R function based on the chi-square statistic formula:
+
 $$
 \chi^2_{k-1} = \sum^k_{i=1}\frac{(Y_i-tp_i)^2} {tp_i}
 $$
+
 $t =$ number of observations
 
 $p_i = $probability that each observation falls into the the category i
 
 $Y_i =$ the number of observation that actually do fall into the category i
 
-Using the rnormzig() function to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a chi-square value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution. 
+Using the rnormzig() function to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a chi-square value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution.
 
+## Testing for the Normal
 
 ```{r}
 chi_squared_test_norm <- function(x, k){
@@ -207,28 +165,26 @@ chi_squared_test_norm <- function(x, k){
                     df = df))
 }
 
-
-
-
-
-```
-
-```{r}
 set.seed(777)
 
 k <- 200
-results <- chi_squared_test_norm(x, k)
-results2 <- chi_squared_test_norm(x2, k)
+normal = rnorm(1000000) # for comparison
+results <- chi_squared_test_norm(x_1, k)
+results2 <- chi_squared_test_norm(normal, k)
 
 results$Method <- "Ziggurat"
 results2$Method <- "Rnorm"
 
 combined <- rbind(results, results2)
 combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
-kable(combined, caption = "Chi-squared value: Ziggurat vs Rnorm")
+df <- k - 1 
+combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
+#Format for readability 
+combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-squared value: Ziggurat vs rnorm")
 ```
 
-```{r}
+```{r, echo=FALSE}
 n <- c(10000, 100000, 1000000, 10000000)
 set.seed(777)
 k <- 200 
@@ -237,9 +193,7 @@ for(i in 1:length(n)){
   vectors <- rnormzig(n[i])
   chi_sq <- chi_squared_test_norm(vectors, k)
   value[i] <- chi_sq$chi_square 
-  
 }
-
 
 df <- data.frame(
   n = n,
@@ -257,14 +211,30 @@ ggplot(df, aes(x = n, y = chi_square)) +
   ) +
   theme_bw()
 ```
-# Chi-squared Test for Exponential 
+
+## Testing for the Exponential
+
+We can generate exponential samples using our Ziggurat function.
+
+```{r}
+set.seed(77)
+x_2 <- rexpzig(1000000)
+```
+
+And again, look at the histogram of the samples in comparison to the real distribution function.
+
+```{r, echo=FALSE}
+hist(x_2, breaks = 100, freq = FALSE, main="Distribution of Normal Samples", xlab="x")
+curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
+```
+
+Repeating the steps from the previous section, we can write a function to divide up our distribution into bins, this time starting from 0 instead of -7.
+
 ```{r}
 chi_squared_test_exp <- function(x, k){
   t <- length(x) # number of observations
-  
   #binomial distribution approximately normal when np > 5, when we use bins with equal width np gets     very small which means Y_i is not approx. normal and the chi square test fails b/c test stat not       normal
   bins <- qexp(seq(0, 1, length.out = k+1), rate = 1) #200 bins all with the same probability
-
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
@@ -278,23 +248,29 @@ chi_squared_test_exp <- function(x, k){
   return(data.frame(chi_square = chi_sq,
                     df = df))
 }
-```
 
-```{r}
 set.seed(777)
 
 k <- 200
-results_exp <- chi_squared_test_exp(x_exp, k)
-results2_exp <- chi_squared_test_exp(x2_exp, k)
+exp <- rexp(1000000)
+results_exp <- chi_squared_test_exp(x_2, k)
+results2_exp <- chi_squared_test_exp(exp, k)
 
 results_exp$Method <- "Ziggurat"
 results2_exp$Method <- "Rexp"
 
 combined <- rbind(results_exp, results2_exp)
 combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
-kable(combined, caption = "Chi-squared value: Ziggurat vs Rexp")
+df <- k - 1 
+combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
+#Format for readability 
+combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-squared value: Ziggurat vs rexp")
 ```
-```{r}
+
+And last, we can see how the chi-square statistic varies by sample size.
+
+```{r, echo=FALSE}
 set.seed(777)
 n <- c(10000, 100000, 1000000, 10000000)
 k <- 200 
@@ -305,7 +281,6 @@ for(i in 1:length(n)){
   value[i] <- chi_sq$chi_square 
   
 }
-
 
 df <- data.frame(
   n = n,
@@ -323,5 +298,15 @@ ggplot(df, aes(x = n, y = chi_square)) +
   ) +
   theme_bw()
 ```
+
+\newpage 
+
 ## Works Cited
 
+“What’s New or Different — NumPy V2.4 Manual.” Numpy.org, 2025, numpy.org/doc/stable/reference/random/new-or-different.html. 
+
+Leong, Philip H. W., et al. “A Comment on the Implementation of the Ziggurat Method”. Journal of Statistical Software, vol. 12, no. 7, Feb. 2005, pp. 1-4, doi:10.18637/jss.v012.i07.
+
+Marsaglia, George, and Wai Wan Tsang. “The Ziggurat Method for Generating Random Variables”. Journal of Statistical Software, vol. 5, no. 8, Oct. 2000, pp. 1-7, doi:10.18637/jss.v005.i08.
+
+Marsaglia, G., & Tsang, W. W. (1984). A Fast, Easily Implemented Method for Sampling from Decreasing or Symmetric Unimodal Density Functions. SIAM Journal on Scientific and Statistical Computing, 5(2), 349–359. https://doi.org/10.1137/0905026
