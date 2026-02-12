@@ -145,27 +145,14 @@ $Y_i =$ the number of observation that actually do fall into the category i
 
 Using the rnormzig() function to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins spaced uniformly over $[-7, 7]$  which we chose based on the paper that also analyzes the Ziggurat method (Leong et al. 2005). The calculated 2 value was 174.2026 and 184.4201 for the Ziggurat method and the rnorm() function in R, respectively. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. Our implementation was also ran over increasing number of samples– one hundred thousand, a million, etc– which all had a chi-square value less than the critical value of 232.912. Thus, we have successfully generated random variables that follow a normal distribution.
 
+```{r}
+source("ChiSquare.R")
+```
+
+
 ## Testing for the Normal
 
-```{r}
-chi_squared_test_norm <- function(x, k){
-  t <- length(x) # number of observations
-  p <- 1 / 1000000000 # guarantee a very small probability of multiple samples ending up in each bin
-  bins <- qnorm(seq(p, 1-p, length.out = k+1), mean = 0, sd = 1) #200 bins with equal prob
-  
-  Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
-  # expected probabilites (p_i) of standard normal
-  p_i <- numeric(k)
-  for (i in 1:k) {
-    p_i[i] <- pnorm(bins[i+1]) - pnorm(bins[i])
-}
-  # using computing chi square using equation from the paper
-  chi_sq <- sum((Yi - t * p_i)^2 / (t * p_i))
-  df <- k - 1
-  return(data.frame(chi_square = chi_sq,
-                    df = df))
-}
-
+```{r, echo=FALSE}
 set.seed(777)
 
 k <- 200
@@ -181,8 +168,11 @@ combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
 df <- k - 1 
 combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
 #Format for readability 
-combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
-kable(combined, caption = "Chi-squared value: Ziggurat vs rnorm")
+combined$p_value <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-Squared Test: Ziggurat vs rnorm",
+      col.names = c("Method", "$\\chi^2$", "df", "p"),
+      escape = FALSE,
+      booktabs=TRUE)
 ```
 
 ```{r, echo=FALSE}
@@ -232,24 +222,6 @@ curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
 Repeating the steps from the previous section, we can write a function to divide up our distribution into bins, this time starting from 0 instead of -7.
 
 ```{r}
-chi_squared_test_exp <- function(x, k){
-  t <- length(x) # number of observations
-  p <- 1 / 1000000000 # guarantee a very small probability of multiple samples ending up in each bin
-  bins <- qexp(seq(p, 1-p, length.out = k+1)) #200 bins with equal prob
-  
-  Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
-  # expected probabilites (p_i) of standard normal
-  p_i <- numeric(k)
-  for (i in 1:k) {
-    p_i[i] <- pexp(bins[i+1]) - pexp(bins[i])
-}
-  # using computing chi square using equation from the paper
-  chi_sq <- sum((Yi - t * p_i)^2 / (t * p_i))
-  df <- k - 1
-  return(data.frame(chi_square = chi_sq,
-                    df = df))
-}
-
 set.seed(777)
 
 k <- 200
@@ -265,8 +237,11 @@ combined <- combined[, c("Method", setdiff(names(combined), "Method"))]
 df <- k - 1 
 combined$p_value <- pchisq(combined$chi_square, df = df, lower.tail = FALSE)
 #Format for readability 
-combined$p_value_formatted <- format.pval(combined$p_value, digits = 3)
-kable(combined, caption = "Chi-squared value: Ziggurat vs rexp")
+combined$p_value <- format.pval(combined$p_value, digits = 3)
+kable(combined, caption = "Chi-Squared Test: Ziggurat vs rexp",
+      col.names = c("Method", "$\\chi^2$", "df", "p"),
+      escape = FALSE,
+      booktabs=TRUE)
 ```
 
 And last, we can see how the chi-square statistic varies by sample size.
@@ -304,8 +279,50 @@ ggplot(df, aes(x = n, y = chi_square)) +
 
 One of the challenges faced working on this Midterm would be some coding obstacles. Although code was provided within the article, it was not as easy as copying and pasting the code onto R. Their implementation was in C and utilized a lot of low-level optimizations such as shift registers and bitwise operations that are very efficient but distract from the theory of the Ziggurat method. Additionally, C has base 0 indexing while R has base 1, so all the indexing had to be modified from what was described in the paper and implemented in their C code, which caused a lot of trouble. In the end, we did a mix of Marsaglia’s simpler 1984 implementation along with some of the sampling optimizations from the 2000 paper so that the code is intuitive.
 
-Unfortunately, the code runs very slowly because R is an incredibly slow programming language. The thing it is best at is handing off operations to C, which works well for repeated mathematical operations. The sampling optimization of the Ziggurat is that it does if-else comparisons instead of math, which works wonders in low-level CPU code but is actually slower in R. Ultimately, this project serves as a lesson of understanding your platform. The best sampling method is not universal and neither is any statistical method.
+```{r, echo=FALSE}
+library(ggplot2)
 
+n_values <- seq(from = 1000, to = 100000, length.out = 15)
+# vectors to store results
+times_rnorm <- numeric(length(n_values))
+times_zig   <- numeric(length(n_values))
+
+# measure runtimes
+for (i in seq_along(n_values)) {
+  n <- floor(n_values[i])
+  
+  # rnorm
+  times_rnorm[i] <- system.time({
+    rnorm(n)
+  })[["elapsed"]]
+  
+  # rnormzig
+  times_zig[i] <- system.time({
+    rnormzig(n)
+  })[["elapsed"]]
+}
+
+
+plot_data <- data.frame(
+  n = rep(n_values, 2),
+  Time = c(times_rnorm, times_zig),
+  Function = rep(c("rnorm", "rnormzig"), each = length(n_values))
+)
+
+ggplot(plot_data, aes(x = n, y = Time, color = Function)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Runtime Comparison: rnorm vs rnormzig",
+    x = "Samples (n)",
+    y = "Time (seconds)"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = function(x) sprintf("%.3f s", x)) +
+  scale_x_continuous(labels = scales::comma)
+```
+
+As shown in the chart above, the code runs very slowly because R is an incredibly slow programming language. The thing it is best at is handing off operations to C, which works well for repeated mathematical operations. The sampling optimization of the Ziggurat is that it does if-else comparisons instead of math, which works wonders in low-level CPU code but is actually slower in R. Ultimately, this project serves as a lesson of understanding your platform. The best sampling method is not universal and neither is any statistical method.
 
 \newpage 
 
