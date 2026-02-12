@@ -150,7 +150,8 @@ Using the rnormzig() function to generate 1,000,000 random variates, the distrib
 ```{r}
 chi_squared_test_norm <- function(x, k){
   t <- length(x) # number of observations
-  bins <- qnorm(seq(0, 1, length.out = k+1), mean = 0, sd = 1) #200 bins with equal prob
+  p <- 1 / 1000000000 # guarantee a very small probability of multiple samples ending up in each bin
+  bins <- qnorm(seq(p, 1-p, length.out = k+1), mean = 0, sd = 1) #200 bins with equal prob
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
@@ -233,8 +234,8 @@ Repeating the steps from the previous section, we can write a function to divide
 ```{r}
 chi_squared_test_exp <- function(x, k){
   t <- length(x) # number of observations
-  #binomial distribution approximately normal when np > 5, when we use bins with equal width np gets     very small which means Y_i is not approx. normal and the chi square test fails b/c test stat not       normal
-  bins <- qexp(seq(0, 1, length.out = k+1), rate = 1) #200 bins all with the same probability
+  p <- 1 / 1000000000 # guarantee a very small probability of multiple samples ending up in each bin
+  bins <- qexp(seq(p, 1-p, length.out = k+1)) #200 bins with equal prob
   
   Yi <- hist(x, breaks = bins, plot = FALSE)$counts # observed counts
   # expected probabilites (p_i) of standard normal
@@ -299,6 +300,13 @@ ggplot(df, aes(x = n, y = chi_square)) +
   theme_bw()
 ```
 
+## Challenges 
+
+One of the challenges faced working on this Midterm would be some coding obstacles. Although code was provided within the article, it was not as easy as copying and pasting the code onto R. Their implementation was in C and utilized a lot of low-level optimizations such as shift registers and bitwise operations that are very efficient but distract from the theory of the Ziggurat method. Additionally, C has base 0 indexing while R has base 1, so all the indexing had to be modified from what was described in the paper and implemented in their C code, which caused a lot of trouble. In the end, we did a mix of Marsaglia’s simpler 1984 implementation along with some of the sampling optimizations from the 2000 paper so that the code is intuitive.
+
+Unfortunately, the code runs very slowly because R is an incredibly slow programming language. The thing it is best at is handing off operations to C, which works well for repeated mathematical operations. The sampling optimization of the Ziggurat is that it does if-else comparisons instead of math, which works wonders in low-level CPU code but is actually slower in R. Ultimately, this project serves as a lesson of understanding your platform. The best sampling method is not universal and neither is any statistical method.
+
+
 \newpage 
 
 ## Works Cited
@@ -310,3 +318,5 @@ Leong, Philip H. W., et al. “A Comment on the Implementation of the Ziggurat M
 Marsaglia, George, and Wai Wan Tsang. “The Ziggurat Method for Generating Random Variables”. Journal of Statistical Software, vol. 5, no. 8, Oct. 2000, pp. 1-7, doi:10.18637/jss.v005.i08.
 
 Marsaglia, G., & Tsang, W. W. (1984). A Fast, Easily Implemented Method for Sampling from Decreasing or Symmetric Unimodal Density Functions. SIAM Journal on Scientific and Statistical Computing, 5(2), 349–359. https://doi.org/10.1137/0905026
+
+McFarland C. D. (2016). A modified ziggurat algorithm for generating exponentially- and normally-distributed pseudorandom numbers. Journal of statistical computation and simulation, 86(7), 1281–1294. https://doi.org/10.1080/00949655.2015.1060234
