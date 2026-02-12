@@ -20,7 +20,9 @@ https://docs.google.com/document/d/1HZTEfuxbhKEsMSGoFqDvulxrU5hy9rIVp31Wf9el38g/
 source("Ziggurat.R")
 ```
 
-The Ziggurat Method for Generating Random Variables (2000) by Marsaglia and Tsang outlines a strategy for sampling from probability distributions that are either decreasing or symmetric and unimodal. The method itself was first published by the same authors in 1984, but was made more efficient with this publication. The namesake comes from the Ziggurat structures built in ancient Mesopotamia; these massive, rectangular pyramid structures were temple towers that featured several steps. The Ziggurat method functions by dividing the density into 256 regions of equal area ($v$). For all regions besides the base layer, the regions are in the shape of a rectangle, but the lowest region includes both a rectangular component and the tail beyond the cutoff, which is sampled using a specialized accept–reject method. These rectangles are mostly encapsulated under the curve, only a small portion of the right edge sticks out of the density.
+The Ziggurat Method for Generating Random Variables (2000) by Marsaglia and Tsang outlines a strategy for sampling from probability distributions that are either decreasing or symmetric and unimodal. The method itself was first published by the same authors in 1984, but was made more efficient with this publication. The namesake comes from the Ziggurat structures built in ancient Mesopotamia; these massive, rectangular pyramid structures were temple towers that featured several steps. 
+
+The Ziggurat method functions by dividing the density into 256 regions of equal area ($v$). For all regions besides the base layer, the regions are in the shape of a rectangle, but the lowest region includes both a rectangular component and the tail beyond the cutoff, which is sampled using a specialized accept–reject method. These rectangles are mostly encapsulated under the curve, only a small portion of the right edge sticks out of the density.
 
 ```{r, echo=FALSE, out.width="50%", fig.align="center"}
 # build the table for the Ziggurat
@@ -72,18 +74,23 @@ ggplot() +
   )
 ```
 
-Sampling is done by picking a random level of the ziggurat and then drawing from a uniform within it. The optimization here is that most of these points (over 99%) fall under the rectangle above and we are able to immediately accept them by a simple check, without ever computing the density function. This paper is quite significant to RNG, since the Ziggurat method became the standard technique in sampling for many distributions; it also is one of the fastest general methods. In NumPy, one of the most popular Python packages, generators for the Normal, Exponential, and Gamma distributions now utilize the Ziggurat method as of 2019. These generators are 2-10 times faster than the original implementation, which goes to show how efficient this method is.
+Sampling is done by picking a random level of the ziggurat and then drawing from a uniform within it. The optimization here is that most of these points (over 99%) fall under the rectangle above and we are able to immediately accept them by a simple check, without ever computing the density function. 
+
+This paper is quite significant to RNG, since the Ziggurat method became the standard technique in sampling for many distributions; it also is one of the fastest general methods. In NumPy, one of the most popular Python packages, generators for the Normal, Exponential, and Gamma distributions now utilize the Ziggurat method as of 2019. These generators are 2-10 times faster than the original implementation, which goes to show how efficient this method is.
 
 ## Our Application
 
 We implemented two Ziggurat R functions, one for the Normal distribution and one for the Exponential distribution: `rnormzig()` and `rexpzig()`. Separate functions need to be written for each distribution for two reasons. First, the most effective method for drawing from the tail distribution is unique.  For the normal, Marsaglia recommends
 $$
-X = -ln(U_1)/r, Y = -ln(U_2) 
-\\
+X = -ln(U_1)/r, Y = -ln(U_2)
+$$
+$$
 U_1,U_2 \sim \mathrm{Uniform}(0,1)
-\\
+$$
+$$
 \text{if } 2Y > X^2, 
-\\
+$$
+$$
 Z_{tail} = r + X
 $$
 and for the exponential he recommends
@@ -91,7 +98,8 @@ $$
 X = r - log(U), U \sim \mathrm{Uniform}(0,1)
 $$
 Second, the Normal distribution is symmetric about zero, whereas the Exponential distribution is not. After generating a positive Normal x value using the Ziggurat construction, symmetry is enforced by randomly assigning a sign to that value. This step is not necessary when sampling from the Exponential distribution because the distribution is defined only on $[0, infty)$.
- To draw from the rectangles, the code just requires the pdf and the inverse pdf for the distribution. This is done by first computing the breakpoints of each rectangle, which is handled by the function zigtable(). This is done by choosing a random value,$r$, in the domain such that 
+
+To draw from the rectangles, the code just requires the pdf and the inverse pdf for the distribution. This is done by first computing the breakpoints of each rectangle, which is handled by the function zigtable(). This is done by choosing a random value,$r$, in the domain such that 
 $$
 v = rf(r) + \int_{r}^{\inf} f(x)dx
 $$
@@ -100,7 +108,10 @@ $$
 x_{i-1} = f^{-1}(\frac{v}{x_i} + f(x_i))
 $$
 This process repeats until $x_0 = 0$. The challenge here is choosing the optimal $v$ so that the iterative process doesn’t overshoot or undershoot. This is done R’s `uniroot` function
-Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve. In the end, our code can construct a Ziggurat for any distribution that meets the mathematical criteria. Here is an example of the code for the exponential distribution with 8 levels:
+
+Once the breakpoints are computed, it is easy to choose a random area and draw from the uniform within. First, to choose what rectangle we are sampling from, we randomly sample an integer between 2 and 257 (first index is the tail region) from the discrete uniform distribution using `sample()`. `sample()` is relatively slow compared with C implementations, where the index can be extracted cheaply from a single 32-bit random integer using the last 9 bits. After obtaining the rectangle we are sampling from, we check if the rectangle is the base layer. If the rectangle selected is the base layer then we randomly choose a x-value in the using `runif()` and check if $x_i < x_{i-1}$ or that the x-value is in the fast-accept region. If the x-value is not in the fast-accept region the code switches to the distribution-specific tail generator (defined for exponential and normal above) rather than using the rectangular accept/reject logic. The process is the same if the chosen rectangle is not the bottom layer, but if the x-value is not in the fast-accept region we generate an additional uniform height and accept the point $(x,y)$ only if it lies under the pdf curve. In the end, our code can construct a Ziggurat for any distribution that meets the mathematical criteria. 
+
+Here is an example of the code to generate breakpoints for the exponential distribution with 8 levels:
 
 ```{r}
 zigtable(function(x) { exp(-x) }, function(y) { -log(y) },8)
@@ -117,9 +128,9 @@ x_1 <- rnormzig(1000000)
 
 We can plot the distribution of the samples with the actual normal pdf overlayed, which shows good fit.
 
-```{r plot, echo=FALSE}
+```{r plot, echo=FALSE, out.width="50%", fig.align="center"}
 hist(x_1, breaks = 100, freq=FALSE, main="Distribution of Normal Samples", xlab="x")
-curve(dnorm(x), add=TRUE, col="red", lwd=2) # looks good
+curve(dnorm(x), add=TRUE, col="purple", lwd=2) # looks good
 ```
 
 We can also check $\bar{x}$ and $\sigma_x$, which we expect to be very close to 0 and 1, respectively.
@@ -139,11 +150,11 @@ $$
 
 $t =$ number of observations
 
-$p_i = $probability that each observation falls into the the category i, $\frac{1}{k}$ in our implementation
+$p_i =$ probability that each observation falls into the the category i, $\frac{1}{k}$ in our implementation
 
 $Y_i =$ the number of observation that actually do fall into the category i
 
-Using the rnormzig() function to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins of equal density such that values have a less than 1 in 1 billion chance of generating from outside out bins. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. 
+Using `rnormzig()` to generate 1,000,000 random variates, the distribution generated was tested based on 200 bins of equal density such that values have a less than 1 in 1 billion chance of generating from outside out bins. The critical value for a chi-square test with 199 degrees of freedom at 95% confidence level ($\alpha= 0.05$) is 232.912. 
 
 ```{r}
 source("ChiSquare.R")
@@ -199,6 +210,9 @@ ggplot(df, aes(x = n, y = chi_square)) +
   geom_line() +
   geom_point() +
   scale_x_log10() +
+  geom_vline(xintercept = 232.912, linetype = "dashed", color = "red") +
+  annotate("text", x = 232.912, y = Inf, label = "Critical Value", 
+           vjust = 2, hjust = -0.1, color = "red") +
   labs(
     x = "Samples (n)",
     y = "Chi-square Statistic",
@@ -220,9 +234,9 @@ x_2 <- rexpzig(1000000)
 
 And again, look at the histogram of the samples in comparison to the real distribution function.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
 hist(x_2, breaks = 100, freq = FALSE, main="Distribution of Exponential Samples", xlab="x")
-curve(dexp(x), add=TRUE, col="red", lwd=2) # looks good
+curve(dexp(x), add=TRUE, col="purple", lwd=2) # looks good
 ```
 
 Repeating the steps from the previous section, we can write a new function. The main difference is that the exponential distribution starts from 0 instead of $-\infty$ and the $x$ value that ensures less than 1 in 1 billion samples generate outside our bins is different from the normal.
@@ -274,6 +288,9 @@ df <- data.frame(
 ggplot(df, aes(x = n, y = chi_square)) +
   geom_line() +
   geom_point() +
+  geom_vline(xintercept = 232.912, linetype = "dashed", color = "red") +
+  annotate("text", x = 232.912, y = Inf, label = "Critical Value", 
+           vjust = 2, hjust = -0.1, color = "red") +
   scale_x_log10() +
   labs(
     x = "Samples (n)",
@@ -283,7 +300,7 @@ ggplot(df, aes(x = n, y = chi_square)) +
   theme_bw()
 ```
 
-Again, all sample sizes show $\chi^2$ statistics well below our critical value, so we have evidence that we successfully generated from the exponential distribution.
+Again, all sample sizes show $\chi^2$ statistics well below our critical value of 232.912, so we have evidence that we successfully generated from the exponential distribution.
 
 ## Challenges 
 
