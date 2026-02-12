@@ -175,9 +175,10 @@ kable(combined, caption = "Chi-Squared Test: Ziggurat vs rnorm",
       booktabs=TRUE)
 ```
 
+
 ```{r, echo=FALSE}
-n <- c(10000, 100000, 1000000, 10000000)
 set.seed(777)
+n <- 10**(seq(3,7,by=0.5))
 k <- 200 
 value <- numeric(length(n))
 for(i in 1:length(n)){
@@ -196,7 +197,7 @@ ggplot(df, aes(x = n, y = chi_square)) +
   geom_point() +
   scale_x_log10() +
   labs(
-    x = "Number of Samples",
+    x = "Samples (n)",
     y = "Chi-square Statistic",
     title = expression(chi^2 ~ "Statistic vs Sample Size")
   ) +
@@ -248,7 +249,7 @@ And last, we can see how the chi-square statistic varies by sample size.
 
 ```{r, echo=FALSE}
 set.seed(777)
-n <- c(10000, 100000, 1000000, 10000000)
+n <- 10**(seq(3,7,by=0.5))
 k <- 200 
 value <- numeric(length(n))
 for(i in 1:length(n)){
@@ -268,7 +269,7 @@ ggplot(df, aes(x = n, y = chi_square)) +
   geom_point() +
   scale_x_log10() +
   labs(
-    x = "Number of Samples",
+    x = "Samples (n)",
     y = "Chi-square Statistic",
     title = expression(chi^2 ~ "Statistic vs Sample Size")
   ) +
