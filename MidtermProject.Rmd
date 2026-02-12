@@ -76,7 +76,7 @@ Sampling is done by picking a random level of the ziggurat and then drawing from
 
 ## Our Application
 
-We implemented two Ziggurat R functions, one for the Normal distribution and one for the Exponential distribution: rnormzig and rexpzig. Separate functions need to be written for each distribution for two reasons. First, the most effective method for drawing from the tail distribution is unique.  For the normal, Marsaglia recommends
+We implemented two Ziggurat R functions, one for the Normal distribution and one for the Exponential distribution: `rnormzig()` and `rexpzig()`. Separate functions need to be written for each distribution for two reasons. First, the most effective method for drawing from the tail distribution is unique.  For the normal, Marsaglia recommends
 $$
 X = -ln(U_1)/r, Y = -ln(U_2) 
 \\
@@ -152,14 +152,18 @@ source("ChiSquare.R")
 
 ## Testing for the Normal
 
-```{r, echo=FALSE}
+Take a sample from `rnorm()` and compare it to our sample that we drew previously using the Ziggurat method.
+
+```{r}
 set.seed(777)
 
 k <- 200
 normal = rnorm(1000000) # for comparison
 results <- chi_squared_test_norm(x_1, k)
 results2 <- chi_squared_test_norm(normal, k)
+```
 
+```{r, echo=FALSE}
 results$Method <- "Ziggurat"
 results2$Method <- "Rnorm"
 
@@ -174,7 +178,6 @@ kable(combined, caption = "Chi-Squared Test: Ziggurat vs rnorm",
       escape = FALSE,
       booktabs=TRUE)
 ```
-
 
 ```{r, echo=FALSE, out.width="50%", fig.align="center"}
 set.seed(777)
@@ -231,7 +234,9 @@ k <- 200
 exp <- rexp(1000000)
 results_exp <- chi_squared_test_exp(x_2, k)
 results2_exp <- chi_squared_test_exp(exp, k)
+```
 
+```{r, echo=FALSE}
 results_exp$Method <- "Ziggurat"
 results2_exp$Method <- "Rexp"
 
