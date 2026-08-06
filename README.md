@@ -101,5 +101,5 @@ Although the resulting implementation is slower than optimized C versions, it cl
 
 ## Authors
 
-Charlotte Huang and collaborators
+Holden Ellis, Barron Bronson, Charlotte Huang, Ethan Alteza
 
